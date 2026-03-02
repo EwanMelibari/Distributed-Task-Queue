@@ -31,3 +31,29 @@ This Distributed Task Queue is built on 5 fundamental pillars to ensure efficien
 The system follows the **Reliable Queue Pattern** using Redis Lists:
 - `pending_tasks`: The main queue for tasks waiting to be processed.
 - `processing_tasks`: A temporary list for tasks currently in execution (to ensure fault tolerance).
+## 📐 System Design
+
+The system is designed to handle asynchronous workloads across a distributed environment, ensuring that task production and consumption are entirely decoupled.
+
+### 1. High-Level Architecture
+The architecture consists of three main layers: the **Producer Layer** (Java Applications), the **Message Broker** (Redis), and the **Worker Cluster**. This setup allows for horizontal scaling by simply adding more worker nodes to the cluster.
+
+![High-Level Architecture](./Java%20Worker%20Cluster%20Task-2026-03-02-222132.png)
+
+* **Producers:** Java applications that create tasks and push them into the global queue.
+* **Redis Broker:** Acts as the centralized task store, managing `Pending`, `Processing`, and `Dead Letter` queues.
+* **Worker Cluster:** A set of independent Java instances that pull tasks, execute logic, and provide feedback (ACK).
+
+---
+
+### 2. Task Lifecycle (Activity Diagram)
+To ensure reliability, the system follows a strict state-transition logic for every task. This prevents task loss even in the event of a worker crash (Fault Tolerance).
+
+![Task Activity Diagram](./Java%20Worker%20Cluster%20Task%20Activity%20diagram-2026-03-02-222542.png)
+
+#### Key Workflow Steps:
+1.  **Submission:** The producer serializes the task into JSON and pushes it to the `pending_tasks` list.
+2.  **Reliable Polling:** A worker uses the `RPOPLPUSH` atomic command to move the task to a `processing_tasks` list while fetching it.
+3.  **Execution:** The worker executes the task's business logic.
+4.  **Acknowledgment (ACK):** Upon success, the task is permanently removed from the `processing_tasks`.
+5.  **Error Handling & Retries:** If execution fails, the system increments the retry counter and re-queues the task until it reaches the maximum limit, after which it is moved to the **Dead Letter Queue (DLQ)**.
