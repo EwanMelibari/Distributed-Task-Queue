@@ -19,11 +19,11 @@ This Distributed Task Queue is built on 5 fundamental pillars to ensure efficien
 - **Retry Mechanism:** Automatic rescheduling of failed tasks based on a configurable retry policy (Exponential Backoff).
 
 ### 2. Tech Stack
-- **Language:** Java 17+ (utilizing Records and modern Concurrency utilities).
+- **Language:** Java 21+ (utilizing Records and modern Concurrency utilities).
 - **Data Store:** Redis (serving as the primary engine for queues and distributed locking).
 - **Serialization:** Jackson (converting Java objects to/from JSON for cross-platform compatibility).
 - **Driver:** Jedis or Lettuce (official Java clients for Redis).
-- **Build Tool:** Maven or Gradle.
+- **Build Tool:** Maven.
 
 ---
 
