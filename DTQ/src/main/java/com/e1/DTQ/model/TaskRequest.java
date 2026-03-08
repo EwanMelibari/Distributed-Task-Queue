@@ -8,11 +8,11 @@ public record TaskRequest (
 
     String taskId,
     String taskType,
-    Map<String, Object> payload,
+    Map<String, Object> payload, // 2. Use Map<String, Object> for flexible payload structure
     int retryCount,
     long creatingTimestamp
 
-) implements Serializable {
+) implements Serializable { // 1. Implement Serializable for potential future use in distributed systems
 
  public TaskRequest( String taskId, String taskType, Map<String, Object> payload) {
         this(taskId, taskType, payload, 0, Instant.now().toEpochMilli());
