@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.util.Map;
 
+
 public record TaskRequest (
 
     String taskId,
@@ -17,6 +18,11 @@ public record TaskRequest (
  public TaskRequest( String taskId, TaskType taskType, Map<String, Object> payload) {
         this(taskId, taskType, payload, 0, Instant.now().toEpochMilli());
     }
+
+ public TaskRequest(TaskType taskType, Map<String, Object> payload) {
+        this(java.util.UUID.randomUUID().toString(), taskType, payload);
+    }   
+
 
  }
 
