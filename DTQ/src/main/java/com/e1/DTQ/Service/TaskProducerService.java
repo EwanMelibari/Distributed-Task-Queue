@@ -34,4 +34,13 @@ public class TaskProducerService {
         }
     }
 
+    public Long getPendingTaskCount() {
+        try {
+            return taskRepository.getPendingCount();
+        } catch (Exception e) {
+            log.error("Critical: Could not connect to Redis to get pending task count", e);
+            throw new RuntimeException("Queue Service Unavailable");
+        }
+    }
+
 }

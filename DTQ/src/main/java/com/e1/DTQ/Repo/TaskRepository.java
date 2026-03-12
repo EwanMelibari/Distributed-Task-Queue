@@ -44,5 +44,9 @@ public class TaskRepository {
         redisTemplate.opsForList().leftPush(pendingQueue, task);
     }
 
+    public Long getPendingCount(){
+        return redisTemplate.opsForList().size(pendingQueue);
+    }
+
     
 }
