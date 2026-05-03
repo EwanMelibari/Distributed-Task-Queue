@@ -4,35 +4,37 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
-
-// Configuration class for setting up RedisTemplate to interact with Redis data store
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 @Configuration
 public class RedisConfig {
-    // Method to create and configure a RedisTemplate bean for interacting with Redis
+
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
+    RedisTemplate<String, Object> template = new RedisTemplate<>();
+    template.setConnectionFactory(connectionFactory);
 
-        // 1. Create a Jackson ObjectMapper for serializing and deserializing Java objects to JSON
-        ObjectMapper mapper = JsonMapper.builder().build();
-
-        // 2. Create a GenericJacksonJsonRedisSerializer using the ObjectMapper to handle JSON serialization for Redis values
-        GenericJacksonJsonRedisSerializer serializer = new GenericJacksonJsonRedisSerializer(mapper); // most error-prone part, ensure correct configuration of ObjectMapper for complex types and date handling if needed
-
-        // 3. Configure the RedisTemplate to use StringRedisSerializer for keys and the GenericJacksonJsonRedisSerializer for values and hash values
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(serializer);
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(serializer);
-        
-        template.afterPropertiesSet();
-        return template; // sounds good, but be cautious of potential serialization issues with complex objects or date/time types, ensure ObjectMapper is configured correctly for those cases
-    }
+    ObjectMapper mapper = new ObjectMapper();
+    // دعم الوقت للـ Records
+    mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
     
+    // تفعيل معلومات النوع لمنع الـ ClassCastException الذي رأيناه سابقاً
+    // في ملف RedisConfig.java
+    mapper.activateDefaultTyping(
+        LaissezFaireSubTypeValidator.instance, 
+        ObjectMapper.DefaultTyping.EVERYTHING, 
+        JsonTypeInfo.As.PROPERTY
+    );
+
+    GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(mapper);
+
+    template.setKeySerializer(new StringRedisSerializer());
+    template.setValueSerializer(serializer);
+    
+    return template;
+}
 }

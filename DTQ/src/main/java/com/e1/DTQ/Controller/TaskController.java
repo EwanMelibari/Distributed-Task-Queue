@@ -17,8 +17,12 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/tasks")
-@RequiredArgsConstructor
+
 public class TaskController {
+
+    public TaskController(TaskProducerService taskProducerService) {
+    this.taskProducerService = taskProducerService;
+}
 
     private final TaskProducerService taskProducerService;
 
