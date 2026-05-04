@@ -3,57 +3,56 @@
 ## 🏗 Project Overview
 This project is a high-performance **Distributed Task Queue** built using **Spring Boot 3** and **Redis (Valkey)**. It is designed to handle asynchronous workloads across a distributed environment, ensuring complete decoupling between task production and execution.
 
-## 🛠 Core Principles & Architecture
+## 🏗 System Architecture
+The architecture consists of three main layers: the **Producer Layer**, the **Message Broker (Redis)**, and the **Worker Cluster**.
 
-1. **Decoupling:** Complete isolation between the **Producer** (Spring MVC Controller) and the **Worker** (Scheduled Task Executor).
-2. **Reliable Broker:** Utilizing **Redis** as a centralized, high-speed message broker.
-3. **At-Least-Once Delivery:** Using the **Reliable Queue Pattern** to ensure no tasks are lost if a worker crashes during execution.
-4. **Polymorphic Serialization:** Leveraging Jackson's `@class` type-handling to support multiple task types (Heavy/Light) in a single pipeline.
+![High-Level Architecture](./Java%20Worker%20Cluster%20Task-2026-03-02-222132.png)
 
----
-
-## 📋 Technical Stack
-*   **Language:** Java 21 (Records, Modern Concurrency).
-*   **Framework:** Spring Boot 3.3.0.
-*   **Data Store:** Redis / Valkey.
-*   **Serialization:** Jackson JSON with Default Typing.
-*   **Scheduling:** Spring `@Scheduled` with dedicated `ThreadPoolTaskExecutor`.
+1. **Producers:** Java applications that create tasks and push them into the global queue via `LPUSH`.
+2. **Redis Broker:** Acts as the centralized task store, managing `Pending`, `Processing`, and `Dead Letter` queues.
+3. **Worker Cluster:** Independent Java instances that pull tasks, execute logic, and provide feedback (ACK).
 
 ---
 
-## 🏗 Redis Data Structure Strategy
-The system manages tasks through three primary lists for maximum reliability:
+## 📐 Task Lifecycle (Activity Diagram)
+To ensure reliability, the system follows a strict state-transition logic for every task.
 
-| List Key | Description | Redis Operation |
-| :--- | :--- | :--- |
-| `tasks:pending` | Tasks waiting to be processed. | `LPUSH` / `RPOPLPUSH` |
-| `tasks:processing` | Tasks currently handled by a worker. | `RPOPLPUSH` |
-| `tasks:dead_letter` | Failed tasks exceeding retry limits. | Manual Intervention |
+![Task Activity Diagram](./Java%20Worker%20Cluster%20Task%20Activity%20diagram-2026-03-02-222542.png)
 
----
-
-## 📐 Task Lifecycle
-
-
-1.  **Submission:** Producer serializes `TaskRequest` to JSON and pushes it to `tasks:pending`.
-2.  **Atomic Polling:** Worker uses `RPOPLPUSH` to move the task to `tasks:processing` atomically.
-3.  **Execution:** `TaskProcessorService` routes the task based on its type (`HEAVY_TASK` or `LIGHT_TASK`).
-4.  **Acknowledgment (ACK):** On success, the task is removed from `tasks:processing`.
-5.  **Retry Logic:** On failure, the retry count is incremented. If under the limit (3), it returns to `pending`. Otherwise, it moves to `dead_letter`.
+#### Key Workflow Steps:
+1. **Submission:** The producer serializes the task into JSON and pushes it to the `tasks:pending` list.
+2. **Reliable Polling:** A worker uses the `RPOPLPUSH` atomic command to move the task to `tasks:processing` while fetching it.
+3. **Execution:** The worker executes the task's business logic via `TaskProcessorService`.
+4. **Acknowledgment (ACK):** Upon success, the task is permanently removed from the `tasks:processing`.
+5. **Error Handling & Retries:** If execution fails, the system increments the retry counter. If it reaches the limit (3), it is moved to the **Dead Letter Queue**.
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
-*   Java 21 installed.
-*   Redis or Valkey server running on `localhost:6379`.
+### 1. Prerequisites
+*   **Java 21** or higher.
+*   **Redis** (or **Valkey**) server running on `localhost:6379`.
 
-### Installation
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/your-username/Distributed-Task-Queue.git](https://github.com/your-username/Distributed-Task-Queue.git)
-    ```
-2.  **Start the Application:**
-    ```bash
-    mvn spring-boot:run
+### 2. Configuration
+Ensure your `application.properties` has the correct Redis and Queue settings:
+```properties
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+queue.name.pending=tasks:pending
+queue.name.processing=tasks:processing
+```
+
+### 3. Testing the System
+Enqueue a Task:
+
+```Bash
+curl -X POST "http://localhost:8080/api/tasks/enqueue?type=HEAVY_TASK" \
+     -H "Content-Type: application/json" \
+     -d '{"description": "My first heavy task", "data": "12345"}'
+```
+
+Check Queue Status:
+
+```Bash
+curl -X GET "http://localhost:8080/api/tasks/status"
